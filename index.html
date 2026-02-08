@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QQ摸摸头GIF生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        .form-item {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+        input, select {
+            width: 100%;
+            height: 48px;
+            padding: 0 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #333;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            border-color: #409eff;
+        }
+        input::placeholder {
+            color: #ccc;
+        }
+        button {
+            width: 100%;
+            height: 50px;
+            background: #409eff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 25px;
+        }
+        button:disabled {
+            background: #a0cfff;
+            cursor: not-allowed;
+        }
+        .result-box {
+            width: 100%;
+            min-height: 200px;
+            border: 1px dashed #e5e7eb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+        .result-tip {
+            color: #999;
+            font-size: 14px;
+            text-align: center;
+        }
+        #gif-result {
+            max-width: 100%;
+            max-height: 300px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            color: #409eff;
+            font-size: 14px;
+        }
+        .error-tip {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fef0f0;
+            color: #f56c6c;
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            display: none;
+            z-index: 999;
+        }
+        .download-btn {
+            margin-top: 15px;
+            background: #67c23a;
+            display: none;
+        }
+        .download-btn:hover {
+            background: #5eba2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-tip" id="error-tip"></div>
+    <div class="container">
+        <h1>QQ摸摸头GIF生成器</h1>
+        <div class="form-item">
+            <label for="qq">QQ号码</label>
+            <input type="text" id="qq" placeholder="请输入纯数字QQ号" maxlength="15">
+        </div>
+        <div class="form-item">
+            <label for="bg-color">GIF背景色</label>
+            <select id="bg-color">
+                <option value="transparent">透明（推荐）</option>
+                <option value="white">白色</option>
+                <option value="black">黑色</option>
+            </select>
+        </div>
+        <button id="generate-btn">生成摸摸头GIF</button>
+        <div class="result-box" id="result-box">
+            <div class="result-tip" id="default-tip">生成的GIF将显示在这里</div>
+            <div class="loading" id="loading">正在生成中，请稍候...</div>
+            <img src="" alt="摸摸头GIF" id="gif-result">
+        </div>
+        <button class="download-btn" id="download-btn">下载GIF</button>
+    </div>
+
+    <script>
+        // 获取元素
+        const qqInput = document.getElementById('qq');
+        const bgColorSelect = document.getElementById('bg-color');
+        const generateBtn = document.getElementById('generate-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const resultBox = document.getElementById('result-box');
+        const defaultTip = document.getElementById('default-tip');
+        const loading = document.getElementById('loading');
+        const gifResult = document.getElementById('gif-result');
+        const errorTip = document.getElementById('error-tip');
+
+        // 生成按钮点击事件
+        generateBtn.addEventListener('click', () => {
+            const qq = qqInput.value.trim();
+            const bgColor = bgColorSelect.value;
+
+            // 验证QQ号
+            if (!/^\d+$/.test(qq) || qq.length < 5) {
+                showError('请输入有效的纯数字QQ号');
+                return;
+            }
+
+            // 加载状态
+            setLoading(true);
+            // 隐藏下载按钮和重置图片状态
+            downloadBtn.style.display = 'none';
+            gifResult.style.display = 'none';
+            gifResult.src = '';
+
+            // 拼接API地址，用img直接请求（绕过跨域限制）
+            const apiUrl = `https://uapis.cn/api/v1/image/motou?qq=${qq}&bg_color=${bgColor}`;
+            gifResult.src = apiUrl;
+
+            // 图片加载成功回调
+            gifResult.onload = () => {
+                gifResult.style.display = 'block';
+                showSuccess();
+                downloadBtn.style.display = 'block';
+                // 绑定下载功能
+                downloadBtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = apiUrl;
+                    a.download = `摸摸头_${qq}.gif`;
+                    a.click();
+                };
+            };
+
+            // 图片加载失败回调
+            gifResult.onerror = () => {
+                setLoading(false);
+                showError('生成失败，QQ号无效/服务器异常或网络问题');
+            };
+        });
+
+        // 加载状态切换
+        function setLoading(isLoading) {
+            if (isLoading) {
+                generateBtn.disabled = true;
+                defaultTip.style.display = 'none';
+                loading.style.display = 'block';
+            } else {
+                generateBtn.disabled = false;
+                defaultTip.style.display = 'block';
+                loading.style.display = 'none';
+            }
+        }
+
+        // 生成成功处理
+        function showSuccess() {
+            setLoading(false);
+            defaultTip.style.display = 'none';
+        }
+
+        // 错误提示展示
+        function showError(msg) {
+            errorTip.innerText = msg;
+            errorTip.style.display = 'block';
+            // 3秒后自动隐藏错误提示
+            setTimeout(() => {
+                errorTip.style.display = 'none';
+            }, 3000);
+        }
+
+        // 输入框仅允许输入数字
+        qqInput.addEventListener('input', () => {
+            qqInput.value = qqInput.value.replace(/\D/g, '');
+        });
+    </script>
+</body>
+</html>
